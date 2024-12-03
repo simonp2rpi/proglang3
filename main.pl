@@ -102,9 +102,9 @@ columns([Col | Rest]) --> [Col, ',', RestCols], {flatten([RestCols], Rest)}.
 % Command operation rules
 command_operation([]) --> [].
 command_operation([join, TableName, ColumnName]) -->
-    [linking, TableName, by, their, ColumnName].
+    [linking, TableName, by, their, ColumnName, .].
 command_operation([join, TableName, ColumnName]) -->
-    [connecting, TableName, by, their, ColumnName].
+    [connecting, TableName, by, their, ColumnName, .].
 command_operation([matches, Values]) -->
     [such, that, its, values, are, either], values(Values).
 command_operation([matches, ColumnName, InnerCommand]) -->
@@ -117,12 +117,12 @@ command_operation(_) -->
     [invalid, operation], { fail }.
 
 % Values parsing
-values([Val]) --> [Val].
+values([Val]) --> [Val, .].
 values([Val | Rest]) --> [Val, or], values(Rest).
-values([Val | Rest]) --> [Val, ',', RestVals], {flatten([RestVals], Rest)}.
+values([Val | Rest]) --> [Val, ',', RestVals, .], {flatten([RestVals], Rest)}.
 
 % Conditions parsing
-conditions([Condition]) --> condition(Condition).
+conditions([Condition]) --> condition(Condition), [.].
 conditions([and, C1, C2]) --> condition(C1), [and], conditions(C2).
 conditions([or, C1, C2]) --> condition(C1), [or], conditions(C2).
 
