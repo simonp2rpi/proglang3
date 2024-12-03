@@ -81,8 +81,8 @@ satisfies_condition(CellValue, '>', Value) :- CellValue @> Value.
 
 % DCG rules for command parsing (to be fully implemented)
 % Main command structure
-command([command, TableColumnInfo, CommandOperation]) -->
-    get, table_column_info(TableColumnInfo), command_operation(CommandOperation).
+command([command, _, CommandOperation]) -->
+    get, table_column_info(_), command_operation(CommandOperation).
 
 % Get keyword
 get --> [get].
@@ -93,8 +93,6 @@ table_column_info([[[Columns], TableName]]) -->
     columns(Columns), [from, TableName].
 table_column_info([[[Columns1], TableName1], [[Columns2], TableName2]]) -->
     columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
-table_column_info(_) -->
-    [invalid, input], { fail }.
 
 % Columns parsing
 columns([Col]) --> [Col].
