@@ -7,8 +7,7 @@ valid_input([get, _Columns, from, _TableName]).
 
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
-    % Parse the command using DCG (to be implemented separately)
-    print(LineSplit).    
+    % Parse the command using DCG (to be implemented separately)  
     valid_input(LineSplit), % Ensure input validity
     phrase(command(Query), LineSplit).
 nlp_parse(LineSplit, _) :-

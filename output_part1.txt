@@ -1,1 +1,1 @@
-['Get',all,from,employee,'.']
+Error: Invalid command syntax
