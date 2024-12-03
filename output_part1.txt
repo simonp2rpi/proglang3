@@ -1,1 +1,1 @@
-Error: Invalid command syntax
+Hello: [Get,all,from,employee,.]
