@@ -6,6 +6,7 @@
 nlp_parse(LineSplit, Query) :-
     % Parse the command using DCG (to be implemented separately)
     print(LineSplit).
+    % phrase(command(Query), LineSplit).
 
 % Evaluate the parsed logical query and return the filtered table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
