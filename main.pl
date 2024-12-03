@@ -8,7 +8,11 @@ nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit),
     debug_msg("Parsed query", Query).
 
-evaluate_logical(Query,FilteredTable) :- fail.
+evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
+    % Process the table information
+    process_table_info(TableColumnInfo, TablesData),
+    % Apply conditions for filtering rows
+    process_conditions(TablesData, Conditions, FilteredTable).
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
