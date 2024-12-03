@@ -2,8 +2,8 @@
 :- [facts].
 :- [helper].
 
-valid_input([get, all, from, _TableName]).
-valid_input([get, _Columns, from, _TableName]).
+valid_input([get, all, from, _]).
+valid_input([get, _, from, _]).
 
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
