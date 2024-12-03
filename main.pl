@@ -5,7 +5,7 @@
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
     % Parse the command using DCG (to be implemented separately)
-    phrase(command(Query), LineSplit).
+    print(LineSplit).
 
 % Evaluate the parsed logical query and return the filtered table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
@@ -19,7 +19,7 @@ parse_and_evaluate(_, [], []).
 
 parse_and_evaluate(part1, [[_, LineSplit] | T], [Query | ResultTail]) :-
     nlp_parse(LineSplit, Query),
-    writeln(Query), % Print the parsed query for part 1
+    write(Query),nl, % Print the parsed query for part 1
     parse_and_evaluate(part1, T, ResultTail).
 
 parse_and_evaluate(part2, [[Line, LineSplit] | T], [Result | ResultTail]) :-
