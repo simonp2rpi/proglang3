@@ -2,10 +2,14 @@
 :- [facts].
 :- [helper].
 
+valid_input([get, all, from, _TableName]).
+valid_input([get, _Columns, from, _TableName]).
+
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
     % Parse the command using DCG (to be implemented separately)
-    print(LineSplit).
+    print(LineSplit).    
+    valid_input(LineSplit), % Ensure input validity
     phrase(command(Query), LineSplit).
 
 % Evaluate the parsed logical query and return the filtered table
