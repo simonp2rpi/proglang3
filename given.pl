@@ -4,7 +4,7 @@
 
 %replace "fail" for your solution. It is simply a placeholder to avoid binding for the starter code.
 nlp_parse(LineSplit,Query):- 
-    print(LineSplit)
+    print(LineSplit),
     phrase(command(Query), LineSplit).
 
 evaluate_logical(Query,FilteredTable):- fail.
