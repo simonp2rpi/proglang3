@@ -2,17 +2,17 @@
 :- [facts].
 :- [helper].
 
-valid_input([get, all, from, _]).
-valid_input([get, _, from, _]).
+% valid_input([get, all, from, _]).
+% valid_input([get, _, from, _]).
 
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
     % Parse the command using DCG (to be implemented separately)  
-    valid_input(LineSplit), % Ensure input validity
+    % valid_input(LineSplit), % Ensure input validity
     phrase(command(Query), LineSplit).
-nlp_parse(LineSplit, _) :-
-    \+ valid_input(LineSplit), 
-    writeln('Error: Invalid command syntax'), fail.
+% nlp_parse(LineSplit, _) :-
+    % \+ valid_input(LineSplit), 
+    % writeln('Error: Invalid command syntax'), fail.
 
 % Evaluate the parsed logical query and return the filtered table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
