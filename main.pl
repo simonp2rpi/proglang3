@@ -86,6 +86,8 @@ table_column_info([[[Columns], TableName]]) -->
     columns(Columns), [from, TableName].
 table_column_info([[[Columns1], TableName1], [[Columns2], TableName2]]) -->
     columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
+table_column_info(_) -->
+    [invalid, input], { fail }.
 
 % Columns parsing
 columns([Col]) --> [Col].
@@ -106,6 +108,8 @@ command_operation([matches, ColumnName, InnerCommand]) -->
     {InnerCommand = [command, [[ColumnName2, TableName]], [where, InnerConditions]]}.
 command_operation([where, Conditions]) -->
     [where], conditions(Conditions).
+command_operation(_) -->
+    [invalid, operation], { fail }.
 
 % Values parsing
 values([Val]) --> [Val].
