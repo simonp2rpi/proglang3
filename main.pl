@@ -11,6 +11,9 @@ nlp_parse(LineSplit, Query) :-
     print(LineSplit).    
     valid_input(LineSplit), % Ensure input validity
     phrase(command(Query), LineSplit).
+nlp_parse(LineSplit, _) :-
+    \+ valid_input(LineSplit), 
+    writeln('Error: Invalid command syntax'), fail.
 
 % Evaluate the parsed logical query and return the filtered table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
