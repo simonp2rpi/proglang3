@@ -8,7 +8,7 @@ nlp_parse(LineSplit, Query) :-
 
 % Get all rows from a table
 evaluate_logical([command, TableColumnInfo, []], FilteredTable) :-
-    TableColumnInfo = [Table, Columns],
+    TableColumnInfo = [Columns, Table],
     table(Table, AllColumns),
     findall(Row, row(Table, Row), Rows),
     FilteredTable = [[Table, AllColumns, Rows]].
@@ -36,7 +36,7 @@ parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):-
     nlp_parse(LineSplit,Query),
     evaluate_logical(Query,FilteredTable),
     write("\t"),write(FilteredTable),nl,
-    print_tables(FilteredTable),
+    % print_tables(FilteredTable),
     parse_and_evaluate(part2,T,ResultTail).
 
 % Main 
