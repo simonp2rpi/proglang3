@@ -22,7 +22,7 @@ parse_and_evaluate(part1,[[_,LineSplit]|T], [Query|ResultTail]):-
     write(Query),nl,
     parse_and_evaluate(part1,T,ResultTail).
                 
-parse_and_evaluate(part2,[[Line,LineSplit]|T], ResultTail):- 
+parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):- 
     write(Line),nl,
     nlp_parse(LineSplit,Query),
     evaluate_logical(Query,FilteredTable),
@@ -40,14 +40,17 @@ main :-
 
 % Main command structure
 command([command, TableColumnInfo, CommandOperation]) -->
-    table_column_info(TableColumnInfo), command_operation(CommandOperation).
+    get, table_column_info(TableColumnInfo), command_operation(CommandOperation).
+
+% Get keyword
+get --> [get].
 
 % Table column info rules
-table_column_info([[all, TableName]]) --> [get, all, from, TableName].
+table_column_info([[all, TableName]]) --> [all, from, TableName].
 table_column_info([[[Columns], TableName]]) -->
-    [get], columns(Columns), [from, TableName].
+    columns(Columns), [from, TableName].
 table_column_info([[[Columns1], TableName1], [[Columns2], TableName2]]) -->
-    [get], columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
+    columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
 
 % Columns parsing
 columns([Col]) --> [Col].
