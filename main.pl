@@ -22,13 +22,14 @@ parse_and_evaluate(part1,[[_,LineSplit]|T], [Query|ResultTail]):-
     write(Query),nl,
     parse_and_evaluate(part1,T,ResultTail).
                 
-parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):- 
+parse_and_evaluate(part2,[[Line,LineSplit]|T], ResultTail):- 
     write(Line),nl,
     nlp_parse(LineSplit,Query),
     evaluate_logical(Query,FilteredTable),
     %write("\t"),write(FilteredTable),nl,
     print_tables(FilteredTable),
     parse_and_evaluate(part2,T,ResultTail).
+
 % Main 
 main :-
     current_prolog_flag(argv, [DataFile, PrintOption|_]),
@@ -39,17 +40,14 @@ main :-
 
 % Main command structure
 command([command, TableColumnInfo, CommandOperation]) -->
-    get, table_column_info(TableColumnInfo), command_operation(CommandOperation).
-
-% Get keyword
-get --> [get].
+    table_column_info(TableColumnInfo), command_operation(CommandOperation).
 
 % Table column info rules
-table_column_info([[all, TableName]]) --> [all, from, TableName].
+table_column_info([[all, TableName]]) --> [get, all, from, TableName].
 table_column_info([[[Columns], TableName]]) -->
-    columns(Columns), [from, TableName].
+    [get], columns(Columns), [from, TableName].
 table_column_info([[[Columns1], TableName1], [[Columns2], TableName2]]) -->
-    columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
+    [get], columns(Columns1), [from, TableName1, and], columns(Columns2), [from, TableName2].
 
 % Columns parsing
 columns([Col]) --> [Col].
