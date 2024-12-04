@@ -62,7 +62,7 @@ match_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) -->
 [such, that], col(Col), [matches, values, within, the], col(Col2), [in], table(Table2), where_operation(WhereOperation).
     
 where_operation([where, OrConditions]) --> [where], or_condition(OrConditions).
-where_operation([where, OrConditions]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
+where_operation([where, and, OrConditions]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
 {append([FirstCondition], [SecondCondition], OrConditions)}.
     
 or_condition([condition, Col, Equality, Val]) --> condition(Col, Equality, Val).
