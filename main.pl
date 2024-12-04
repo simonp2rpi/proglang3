@@ -5,7 +5,7 @@
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
     % Parse the command using DCG
-    phrase(command(Query), LineSplit),
+    command(LineSplit)
     debug_msg("Parsed query", Query).
 
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
