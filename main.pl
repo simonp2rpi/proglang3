@@ -7,10 +7,12 @@ nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit).
 
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
+    print(TableColumnInfo),
+    print(Conditions).
     % Process the table information
-    process_table_info(TableColumnInfo, TablesData),
+    % process_table_info(TableColumnInfo, TablesData),
     % Apply conditions for filtering rows
-    process_conditions(TablesData, Conditions, FilteredTable).
+    % process_conditions(TablesData, Conditions, FilteredTable).
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
@@ -62,7 +64,7 @@ match_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) -->
 [such, that], col(Col), [matches, values, within, the], col(Col2), [in], table(Table2), where_operation(WhereOperation).
     
 where_operation([where, OrConditions]) --> [where], or_condition(OrConditions).
-where_operation([where, OrConditions]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
+where_operation([where, [and | OrConditions]]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
 {append([FirstCondition], [SecondCondition], OrConditions)}.
     
 or_condition([condition, Col, Equality, Val]) --> condition(Col, Equality, Val).
@@ -79,10 +81,14 @@ table(Table) --> [Table], {atom(Table)}.
 columns([Col]) --> col(Col).
 columns([Col | Rest]) --> col(Col), [','], columns(Rest).
 columns([Col1, Col2]) --> col(Col1), [and], col(Col2).
+columns([Col | Rest]) --> col(Col), [and], columns(Rest).
+columns([Col1, Col2]) --> col(Col1), [','], col(Col2).
     
 col(Col) --> [Col], {atom(Col)}.
 values([Val]) --> val(Val).
 values([Val | Rest]) --> val(Val), [','], values(Rest).
 values([Val1, Val2]) --> val(Val1), [or], val(Val2).
+values([Val | Rest]) --> val(Val), [or], values(Rest).
+values([Val1, Val2]) --> val(Val1), [','], val(Val2).
     
 val(Val) --> [Val], {atom(Val)}.
