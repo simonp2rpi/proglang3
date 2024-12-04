@@ -77,8 +77,8 @@ values([Val | Rest]) --> [Val, ',', RestVals], {flatten([RestVals], Rest)}.
 
 % Conditions parsing
 conditions([Condition]) --> condition(Condition).
-conditions([and, C1, C2]) --> condition(C1), [and], conditions(C2).
-conditions([or, C1, C2]) --> condition(C1), [or], conditions(C2).
+conditions([and, C1, C2]) --> conditions(C1), [and], conditions(C2).
+conditions([or, C1, C2]) --> condition(C1), [or], condition(C2).
 
 % Single condition parsing
 condition([condition, Col, Op, Val]) -->
