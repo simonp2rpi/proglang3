@@ -5,7 +5,6 @@
 % Parse SQL-like natural language commands into a structured query
 nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit).
-    phrase(command(Query), LineSplit).
 
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
     print(TableColumnInfo),
@@ -20,7 +19,6 @@ parse_and_evaluate(_,[], []).
 
 parse_and_evaluate(part1,[[_,LineSplit]|T], [Query|ResultTail]):- 
     nlp_parse(LineSplit,Query),
-    writeln(Query),
     writeln(Query),
     parse_and_evaluate(part1,T,ResultTail).
                 
@@ -68,7 +66,28 @@ match_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) -->
 where_operation([where, OrConditions]) --> [where], or_condition(OrConditions).
 where_operation([where, [and | OrConditions]]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
 {append([FirstCondition], [SecondCondition], OrConditions)}.
-    
+
+% Case for 'and' with nested 'and' conditions
+where_operation([where, [and | OrConditions]]) --> 
+    [where], 
+    or_condition(FirstCondition), 
+    [and], 
+    nested_and_conditions(NestedConditions),
+    {append([FirstCondition], [NestedConditions], OrConditions)}.
+
+% Parsing nested 'and' conditions
+nested_and_conditions([and | OrConditions]) -->
+    or_condition(FirstCondition), 
+    [and], 
+    or_condition(SecondCondition),
+    {append([FirstCondition], [SecondCondition], OrConditions)}.
+
+nested_and_conditions([and | OrConditions]) -->
+    or_condition(FirstCondition), 
+    [and], 
+    nested_and_conditions(NestedConditions),
+    {append([FirstCondition], [NestedConditions], OrConditions)}.
+
 or_condition([condition, Col, Equality, Val]) --> condition(Col, Equality, Val).
 or_condition([or, Condition1, Condition2]) --> [either], condition(Col1, Equality1, Val1), [or], condition(Col2, Equality2, Val2), 
 {Condition1 = [condition, Col1, Equality1, Val1], Condition2 = [condition, Col2, Equality2, Val2]}.
