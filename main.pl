@@ -6,21 +6,9 @@
 nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit).
 
-% Get all rows from a table
-evaluate_logical([command, TableColumnInfo, []], FilteredTable) :-
-    TableColumnInfo = [Columns, Table],
-    table(Table, AllColumns),
-    findall(Row, row(Table, Row), Rows),
-    FilteredTable = [[Table, AllColumns, Rows]].
-
 % Get specific columns from a table
-evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
-    TableColumnInfo = [Table, Columns],
-    table(Table, AllColumns),
-    findall(Row, row(Table, Row), AllRows),
-    filter_rows(AllRows, AllColumns, Conditions, FilteredRows),
-    project_columns(FilteredRows, AllColumns, Columns, ProjectedRows),
-    FilteredTable = [[Table, Columns, ProjectedRows]].
+evaluate_logical(Query,FilteredTable) :-
+    phrase(tableCommand(FilteredTable), Query).
 
 
 % Parse individual commands and evaluate
