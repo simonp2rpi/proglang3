@@ -29,7 +29,6 @@ parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):-
     %write("\t"),write(FilteredTable),nl,
     print_tables(FilteredTable),
     parse_and_evaluate(part2,T,ResultTail).
-
 % Main 
 main :-
     current_prolog_flag(argv, [DataFile, PrintOption|_]),
