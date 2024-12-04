@@ -6,13 +6,22 @@
 nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit).
 
+% Get all rows from a table
+evaluate_logical([command, TableColumnInfo, []], FilteredTable) :-
+    TableColumnInfo = [Table, Columns],
+    table(Table, AllColumns),
+    findall(Row, row(Table, Row), Rows),
+    FilteredTable = [[Table, AllColumns, Rows]].
+
+% Get specific columns from a table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
-    print(TableColumnInfo),
-    print(Conditions).
-    % Process the table information
-    % process_table_info(TableColumnInfo, TablesData),
-    % Apply conditions for filtering rows
-    % process_conditions(TablesData, Conditions, FilteredTable).
+    TableColumnInfo = [Table, Columns],
+    table(Table, AllColumns),
+    findall(Row, row(Table, Row), AllRows),
+    filter_rows(AllRows, AllColumns, Conditions, FilteredRows),
+    project_columns(FilteredRows, AllColumns, Columns, ProjectedRows),
+    FilteredTable = [[Table, Columns, ProjectedRows]].
+
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
@@ -26,7 +35,7 @@ parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):-
     write(Line),nl,
     nlp_parse(LineSplit,Query),
     evaluate_logical(Query,FilteredTable),
-    %write("\t"),write(FilteredTable),nl,
+    write("\t"),write(FilteredTable),nl,
     print_tables(FilteredTable),
     parse_and_evaluate(part2,T,ResultTail).
 
@@ -92,3 +101,27 @@ values([Val | Rest]) --> val(Val), [or], values(Rest).
 values([Val1, Val2]) --> val(Val1), [','], val(Val2).
     
 val(Val) --> [Val], {atom(Val)}.
+
+% Part 2
+% Helper to filter rows based on conditions
+filter_rows(Rows, Columns, Conditions, FilteredRows) :-
+    include(row_matches_conditions(Columns, Conditions), Rows, FilteredRows).
+
+row_matches_conditions(Columns, Conditions, Row) :-
+    maplist(condition_matches_row(Columns, Row), Conditions).
+
+condition_matches_row(Columns, Row, Condition) :-
+    Condition =.. [Op, Col, Value],
+    nth0(Index, Columns, Col),
+    nth0(Index, Row, Cell),
+    call(Op, Cell, Value).
+
+% Helper to project specific columns
+project_columns(Rows, AllColumns, Columns, ProjectedRows) :-
+    findall(ProjectedRow, 
+        (member(Row, Rows), maplist(get_column_value(Row, AllColumns), Columns, ProjectedRow)), 
+        ProjectedRows).
+
+get_column_value(Row, AllColumns, Column, Value) :-
+    nth0(Index, AllColumns, Column),
+    nth0(Index, Row, Value).
