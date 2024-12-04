@@ -17,7 +17,7 @@ parse_and_evaluate(_,[], []).
 
 parse_and_evaluate(part1,[[_,LineSplit]|T], [Query|ResultTail]):- 
     nlp_parse(LineSplit,Query),
-    write(Query),nl,
+    writeln(Query),
     parse_and_evaluate(part1,T,ResultTail).
                 
 parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):- 
@@ -43,46 +43,46 @@ command([command, TableColumnInfo, CommandOperation]) -->
     
 table_column_info([[all, Table]]) -->  [all, from], table(Table).
 table_column_info([[Columns, Table]]) --> columns(Columns), [from], table(Table).
-table_column_info([TableColumnDetail, and | Rest]) --> 
-    table_column_detail(TableColumnDetail), [and], table_column_info(Rest).
+table_column_info([TableColumnDetail | Rest]) --> table_column_detail(TableColumnDetail), [and], table_column_info(Rest).
     
 table_column_detail([all, Table]) --> [all, from], table(Table).
 table_column_detail([Columns, Table]) --> columns(Columns), [from], table(Table).
     
 command_operation([]) --> [.].
-command_operation([join, Table, Col]) --> [linking], table(Table), [by, their], col(Col).
-command_operation([join, Table, Col]) --> [connecting], table(Table), [by, their], col(Col).
-command_operation([matches, Values]) --> [such, that, its, values, are, either], values(Values).
-command_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) --> 
-    col(Col), [matches, values, within, the], col(Col2), [in], table(Table2), where_operation(WhereOperation).
-command_operation(WhereOperation) --> where_operation(WhereOperation).
+command_operation(JoinOperation) --> join_operation(JoinOperation), [.].
+command_operation(MatchOperation) --> match_operation(MatchOperation), [.].
+command_operation(WhereOperation) --> where_operation(WhereOperation), [.].
+
+
+join_operation([join, Table, Col]) --> [linking], table(Table), [by, their], col(Col).
+join_operation([join, Table, Col]) --> [connecting], table(Table), [by, their], col(Col).
+
+match_operation([matches, Values]) --> [such, that, its, values, are, either], values(Values).
+match_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) --> 
+[such, that], col(Col), [matches, values, within, the], col(Col2), [in], table(Table2), where_operation(WhereOperation).
     
 where_operation([where, OrConditions]) --> [where], or_condition(OrConditions).
-    where_operation([where, OrConditions]) --> 
-        [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
-        {append([FirstCondition], [SecondCondition], OrConditions)}.
+where_operation([where, OrConditions]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
+{append([FirstCondition], [SecondCondition], OrConditions)}.
     
-    or_condition([condition, Col, Equality, Val]) --> 
-        condition(Col, Equality, Val).
-    or_condition([or, Condition1, Condition2]) --> 
-        [either], condition(Col1, Equality1, Val1), [or], condition(Col2, Equality2, Val2),
-        {Condition1 = [condition, Col1, Equality1, Val1], Condition2 = [condition, Col2, Equality2, Val2]}.
+or_condition([condition, Col, Equality, Val]) --> condition(Col, Equality, Val).
+or_condition([or, Condition1, Condition2]) --> [either], condition(Col1, Equality1, Val1), [or], condition(Col2, Equality2, Val2), 
+{Condition1 = [condition, Col1, Equality1, Val1], Condition2 = [condition, Col2, Equality2, Val2]}.
     
-    condition(Col, Equality, Val) --> 
-        col(Col), equality(Equality), val(Val).
+condition(Col, Equality, Val) --> col(Col), equality(Equality), val(Val).
     
-    equality(<) --> [is, less, than].
-    equality(>) --> [is, greater, than].
-    equality(=) --> [equals].
+equality(<) --> [is, less, than].
+equality(>) --> [is, greater, than].
+equality(=) --> [equals].
     
-    table(Table) --> [Table], {atom(Table)}.
-    columns([Col]) --> col(Col).
-    columns([Col | Rest]) --> col(Col), [','], columns(Rest).
-    columns([Col1, Col2]) --> col(Col1), [and], col(Col2).
+table(Table) --> [Table], {atom(Table)}.
+columns([Col]) --> col(Col).
+columns([Col | Rest]) --> col(Col), [','], columns(Rest).
+columns([Col1, Col2]) --> col(Col1), [and], col(Col2).
     
-    col(Col) --> [Col], {atom(Col)}.
-    values([Val]) --> val(Val).
-    values([Val | Rest]) --> val(Val), [','], values(Rest).
-    values([Val1, Val2]) --> val(Val1), [or], val(Val2).
+col(Col) --> [Col], {atom(Col)}.
+values([Val]) --> val(Val).
+values([Val | Rest]) --> val(Val), [','], values(Rest).
+values([Val1, Val2]) --> val(Val1), [or], val(Val2).
     
-    val(Val) --> [Val], {atom(Val)}.
+val(Val) --> [Val], {atom(Val)}.
