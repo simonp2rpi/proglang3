@@ -150,6 +150,9 @@ apply_match([[TableName, Columns, _]|RestTables], Values, [[TableName, FinalColu
     (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
     apply_match(RestTables, Values, Results).
 
+apply_join([[Columns, SourceTable]], _, _, [[SourceTable, ColumnList, []]]) :-
+    (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]).
+
 apply_conditions([], _, []).
 apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, FinalColumns, UniqueRows]|Results]) :-
     table(TableName, TableHeaders),
@@ -165,6 +168,12 @@ apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, 
     ), TempRows),
     sort(TempRows, UniqueRows),
     apply_conditions(RestTables, Conditions, Results).
+
+apply_matches_subquery([], _, []).
+apply_matches_subquery([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
+    table(TableName, TableHeaders),
+    (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
+    apply_matches_subquery(RestTables, [], Results).
 
 evaluate_condition(Headers, Row, [condition, Column, Op, Value]) :-
     !,
@@ -245,15 +254,6 @@ compare_dates(Y1, M1, D1, Y2, M2, D2, '=') :-
 
 date_value(Year, Month, Day, Value) :-
     Value is Year * 10000 + Month * 100 + Day.
-
-apply_matches_subquery([], _, []).
-apply_matches_subquery([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
-    table(TableName, TableHeaders),
-    (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
-    apply_matches_subquery(RestTables, [], Results).
-
-apply_join([[Columns, SourceTable]], _, _, [[SourceTable, ColumnList, []]]) :-
-    (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]).
 
 extract_values(TargetColumn, [[_, Headers, Rows]|_], ExtractedValues) :-
     nth0(ColumnIndex, Headers, TargetColumn),
