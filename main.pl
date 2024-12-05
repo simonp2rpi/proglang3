@@ -8,6 +8,12 @@ nlp_parse(LineSplit, Query) :-
 
 % Get specific columns from a table
 evaluate_logical(Query,FilteredTable) :-
+    Query = [command, TableColumnInfo, Conditions],
+    % writeln(TableColumnInfo),
+    % writeln(Conditions),
+    TableColumnInfo = [[Columns, Table]],
+    % writeln(Columns),
+    % writeln(Table),
     phrase(tableCommand(FilteredTable), Query).
 
 
@@ -91,25 +97,46 @@ values([Val1, Val2]) --> val(Val1), [','], val(Val2).
 val(Val) --> [Val], {atom(Val)}.
 
 % Part 2
-% Helper to filter rows based on conditions
-filter_rows(Rows, Columns, Conditions, FilteredRows) :-
-    include(row_matches_conditions(Columns, Conditions), Rows, FilteredRows).
+tableCommand([command, TableColumnInfo, Conditions]) --> 
+    tableName(TableColumnInfo), tableColumnHeader(TableColumnInfo), filteredRows(Conditions).
 
-row_matches_conditions(Columns, Conditions, Row) :-
-    maplist(condition_matches_row(Columns, Row), Conditions).
+tableName([[_, Table]]) --> { table(Table, _) }.
+tableColumnHeader([[_, Table]]) --> 
+    { table(Table, Columns) }, ( 
+        [all] -> { true } ; ColumnsRequested = [[Column|Rest]],
+        { validate_columns(ColumnsRequested, Columns) }
+    ).
 
-condition_matches_row(Columns, Row, Condition) :-
-    Condition =.. [Op, Col, Value],
-    nth0(Index, Columns, Col),
-    nth0(Index, Row, Cell),
-    call(Op, Cell, Value).
+% Function to ensure the column called is valid
+validate_columns([], _).
+validate_columns([Column|Rest], AvailableColumns) :-
+    member(Column, AvailableColumns),
+    validate_columns(Rest, AvailableColumns).
 
-% Helper to project specific columns
-project_columns(Rows, AllColumns, Columns, ProjectedRows) :-
-    findall(ProjectedRow, 
-        (member(Row, Rows), maplist(get_column_value(Row, AllColumns), Columns, ProjectedRow)), 
-        ProjectedRows).
+filteredRows([]) --> []. % No filtering: return all rows.
+filteredRows([join, Table1, Column]) --> { findall(_, fail, []) }. % Join is always empty
+filteredRows([matches, Values]) --> { findall(_, fail, []) }. % Match is always empty
+filteredRows([where, Condition]) --> filter_condition(Condition).
 
-get_column_value(Row, AllColumns, Column, Value) :-
-    nth0(Index, AllColumns, Column),
-    nth0(Index, Row, Value).
+filter_condition([condition, Column, Operator, Value]) --> { 
+    % Fetch rows from the table and apply the condition.
+    table(Table, Columns),
+    nth1(Index, Columns, Column), % Find the index of the column in the table.
+    findall(Row, (row(Table, Row), evaluate_condition(Row, Index, Operator, Value)), FilteredRows)
+    },
+    [FilteredRows].
+
+filter_condition([and, Cond1, Cond2]) --> 
+    filter_condition(Cond1), 
+    filter_condition(Cond2).
+
+filter_condition([or, Cond1, Cond2]) --> { 
+    filter_condition(Cond1, Filtered1, []),
+    filter_condition(Cond2, Filtered2, []),
+    append(Filtered1, Filtered2, FilteredRows)
+    },
+    [FilteredRows].
+
+evaluate_condition(Row, Index, =, Value) :- nth1(Index, Row, RowValue), RowValue = Value.
+evaluate_condition(Row, Index, <, Value) :- nth1(Index, Row, RowValue), RowValue @< Value.
+evalute_condition(Row, Index, >, Value) :- nth1(Index, Row, RowValue), RowValue @> Value.
