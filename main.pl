@@ -128,6 +128,16 @@ tableColumnHeader([[_, Table]]) -->
         { validate_columns(ColumnsRequested, Columns) }
     ).
 
+% suggested alternative
+% tableColumnHeader([[all, Table]]) -->
+%     [all],
+%     { table(Table, _) }.
+    
+% tableColumnHeader([[Columns, Table]]) -->
+%     columns(Columns),
+%     { table(Table, AvailableColumns),
+%       validate_columns(Columns, AvailableColumns) }.
+
 % Function to ensure the column called is valid
 validate_columns([], _).
 validate_columns([Column|Rest], AvailableColumns) :-
