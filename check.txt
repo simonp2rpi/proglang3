@@ -1,0 +1,12 @@
+[and,
+    [or,
+        [condition,CategoryID,>,4],
+        [condition,SupplierID,<,3]
+    ],
+    [and,
+        [or,
+            [condition,CategoryID,>,4],
+            [condition,SupplierID,<,3]],
+            [condition,Price,>,10]
+        ]
+]
