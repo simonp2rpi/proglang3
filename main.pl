@@ -9,7 +9,7 @@ nlp_parse(LineSplit, Query) :-
 % Get specific columns from a table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
     table_command(TableColumnInfo, Conditions, Results),
-    format_results(Results, FilteredTable).
+    table_output(Results, FilteredTable).
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
@@ -121,26 +121,26 @@ val(Val) --> [Val], {atom(Val)}.
 
 
 % Write Part 2 Here
-format_results([], []).
-format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
+table_output([], []).
+table_output([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
     table(TableName, Headers),
-    format_results(RestTables, FormattedRest).
-format_results([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
-    format_results(RestTables, FormattedRest).
+    table_output(RestTables, FormattedRest).
+table_output([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
+    table_output(RestTables, FormattedRest).
 
 table_command(TableColumnInfo, [], Results) :- get_table(TableColumnInfo, Results).
 table_command(TableColumnInfo, [where, Conditions], Results) :-
     get_table(TableColumnInfo, Tables),
-    apply_conditions(Tables, Conditions, Results).
+    process_sort(Tables, Conditions, Results).
 table_command(TableColumnInfo, [matches, Values], Results) :-
     get_table(TableColumnInfo, Tables),
-    apply_match(Tables, Values, Results).
+    match_up(Tables, Values, Results).
 table_command(TableColumnInfo, [join, Table, Column], Results) :-
     apply_join(TableColumnInfo, Table, Column, Results).
 table_command(TableColumnInfo, [matches, MatchCol, [command, [[MatchCol, Table]], [where, Condition]]], Results) :-
     evaluate_logical([command, [[MatchCol, Table]], [where, Condition]], SubResults),
     get_table(TableColumnInfo, Tables),
-    apply_matches_subquery(Tables, SubResults, Results).
+    match_up_part_two(Tables, SubResults, Results).
 
 get_table([], []).
 get_table([[all, TableName] | RestTables], [[TableName, Headers, Rows] | Results]) :-
@@ -158,14 +158,14 @@ get_table([[Columns, TableName]|RestTables], [[TableName, ColumnList, FilteredRo
     sort(TempRows, FilteredRows),
     get_table(RestTables, Results).
 
-apply_match([], _, []).
-apply_match([[TableName, Columns, _]|RestTables], Values, [[TableName, FinalColumns, []]|Results]) :-
+match_up([], _, []).
+match_up([[TableName, Columns, _]|RestTables], Values, [[TableName, FinalColumns, []]|Results]) :-
     table(TableName, TableHeaders),
     (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
-    apply_match(RestTables, Values, Results).
+    match_up(RestTables, Values, Results).
 
-apply_conditions([], _, []).
-apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, FinalColumns, UniqueRows]|Results]) :-
+process_sort([], _, []).
+process_sort([[TableName, Columns, _]|RestTables], Conditions, [[TableName, FinalColumns, UniqueRows]|Results]) :-
     table(TableName, TableHeaders),
     (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
     findall(SelectedValues, (
@@ -178,7 +178,7 @@ apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, 
         )
     ), TempRows),
     sort(TempRows, UniqueRows),
-    apply_conditions(RestTables, Conditions, Results).
+    process_sort(RestTables, Conditions, Results).
 
 process_rule(_, _, []) :- !.
 process_rule(Headers, Row, [condition, Column, Op, Value]) :-
@@ -231,7 +231,6 @@ numComp(Val1, Val2, Op) :-
 atom_to_number(Atom, Number) :-
     atom_number(Atom, Number).
 
-
 date_sort(Date1, Date2, Operator) :-
     safely_extract_date_components(Date1, ParsedDate1),
     safely_extract_date_components(Date2, ParsedDate2),
@@ -256,11 +255,11 @@ numEval(Value1, Value2, '>') :- Value1 > Value2.
 numEval(Value1, Value2, '<') :- Value1 < Value2.
 numEval(Value1, Value2, '=') :- Value1 =:= Value2.
 
-apply_matches_subquery([], _, []).
-apply_matches_subquery([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
+match_up_part_two([], _, []).
+match_up_part_two([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
     table(TableName, TableHeaders),
     (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
-    apply_matches_subquery(RestTables, [], Results).
+    match_up_part_two(RestTables, [], Results).
 
 apply_join([[Columns, SourceTable]], _, _, [[SourceTable, ColumnList, []]]) :-
     (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]).
