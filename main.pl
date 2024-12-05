@@ -39,27 +39,32 @@ main :-
 % DCG Grammar
 command([command, TableColumnInfo, CommandOperation]) --> 
     [Get], table_column_info(TableColumnInfo), command_operation(CommandOperation).
-    
+
+% Making special cases for whether all or a specific Column is used, as further steps in the DCG need to account for this.
 table_column_info([[all, Table]]) -->  [all, from], table(Table).
 table_column_info([[Columns, Table]]) --> columns(Columns), [from], table(Table).
 table_column_info([TableColumnDetail | Rest]) --> table_column_detail(TableColumnDetail), [and], table_column_info(Rest).
     
 table_column_detail([all, Table]) --> [all, from], table(Table).
 table_column_detail([Columns, Table]) --> columns(Columns), [from], table(Table).
-    
+
+% The main command_operation, seperated into three different parts.
+% Join, Match, and Where.
 command_operation([]) --> [.].
 command_operation(JoinOperation) --> join_operation(JoinOperation), [.].
 command_operation(MatchOperation) --> match_operation(MatchOperation), [.].
 command_operation(WhereOperation) --> where_operation(WhereOperation), [.].
 
-
+% Join operation joins a table with a column and is indicated by words like linking and connecting
 join_operation([join, Table, Col]) --> [linking], table(Table), [by, their], col(Col).
 join_operation([join, Table, Col]) --> [connecting], table(Table), [by, their], col(Col).
 
+% Match operations matches up values in a column to give specific rows
 match_operation([matches, Values]) --> [such, that, its, values, are, either], values(Values).
 match_operation([matches, Col, [command, [[Col2, Table2]], WhereOperation]]) --> 
 [such, that], col(Col), [matches, values, within, the], col(Col2), [in], table(Table2), where_operation(WhereOperation).
-    
+
+% Where operations are conditionals, that use or conditions to do logic 
 where_operation([where, OrConditions]) --> [where], or_condition(OrConditions).
 where_operation([where, [and | OrConditions]]) --> [where], or_condition(FirstCondition), [and], or_condition(SecondCondition),
 {append([FirstCondition], [SecondCondition], OrConditions)}.
@@ -85,12 +90,14 @@ nested_and_conditions([and | OrConditions]) -->
     nested_and_conditions(NestedConditions),
     {append([FirstCondition], [NestedConditions], OrConditions)}.
 
+% The or conditions mentioned in the where_operation, which are responsible for logic
 or_condition([condition, Col, Equality, Val]) --> condition(Col, Equality, Val).
 or_condition([or, Condition1, Condition2]) --> [either], condition(Col1, Equality1, Val1), [or], condition(Col2, Equality2, Val2), 
 {Condition1 = [condition, Col1, Equality1, Val1], Condition2 = [condition, Col2, Equality2, Val2]}.
     
 condition(Col, Equality, Val) --> col(Col), equality(Equality), val(Val).
     
+% The many basic building blocks of the DCG, using basic logic and queries
 equality(<) --> [is, less, than].
 equality(>) --> [is, greater, than].
 equality(=) --> [equals].
