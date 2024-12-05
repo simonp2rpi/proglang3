@@ -114,6 +114,13 @@ val(Val) --> [Val], {atom(Val)}.
 
 
 % Write Part 2 Here
+format_results([], []).
+format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
+    table(TableName, Headers),
+    format_results(RestTables, FormattedRest).
+format_results([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
+    format_results(RestTables, FormattedRest).
+
 table_command(TableColumnInfo, [], Results) :- get_table(TableColumnInfo, Results).
 table_command(TableColumnInfo, [where, Conditions], Results) :-
     get_table(TableColumnInfo, Tables),
@@ -139,7 +146,7 @@ get_table([[Columns, TableName]|RestTables], [[TableName, ColumnList, FilteredRo
     (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]),
     findall(SelectedValues, (
         row(TableName, FullRow),
-        extract_values_from_row(FullRow, TableHeaders, ColumnList, SelectedValues)
+        get_values_from_row(FullRow, TableHeaders, ColumnList, SelectedValues)
     ), TempRows),
     sort(TempRows, FilteredRows),
     get_table(RestTables, Results).
@@ -156,64 +163,66 @@ apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, 
     (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
     findall(SelectedValues, (
         row(TableName, FullRow),
-        evaluate_condition(TableHeaders, FullRow, Conditions),
+        process_rule(TableHeaders, FullRow, Conditions),
         (Columns = all ->
             SelectedValues = FullRow
         ;
-            extract_values_from_row(FullRow, TableHeaders, Columns, SelectedValues)
+            get_values_from_row(FullRow, TableHeaders, Columns, SelectedValues)
         )
     ), TempRows),
     sort(TempRows, UniqueRows),
     apply_conditions(RestTables, Conditions, Results).
 
-evaluate_condition(Headers, Row, [condition, Column, Op, Value]) :-
+process_rule(_, _, []) :- !.
+process_rule(Headers, Row, [condition, Column, Op, Value]) :-
     !,
     nth0(Index, Headers, Column),
     nth0(Index, Row, RowValue),
-    compare_function(RowValue, Op, Value).
+    evaluate_numbers(RowValue, Op, Value).
 
-evaluate_condition(Headers, Row, [and, Cond1, Cond2]) :-
+process_rule(Headers, Row, [and, Cond1, Cond2]) :-
     !,
-    evaluate_condition(Headers, Row, Cond1),
-    evaluate_condition(Headers, Row, Cond2).
+    process_rule(Headers, Row, Cond1),
+    process_rule(Headers, Row, Cond2).
 
-evaluate_condition(Headers, Row, [or, Cond1, Cond2]) :-
+process_rule(Headers, Row, [or, Cond1, Cond2]) :-
     !,
-    (evaluate_condition(Headers, Row, Cond1)
+    (process_rule(Headers, Row, Cond1)
     ;
-    evaluate_condition(Headers, Row, Cond2)), !.
+    process_rule(Headers, Row, Cond2)), !.
 
-evaluate_condition(_, _, []) :- !.
-
-extract_values_from_row(CurrentRow, Headers, ColumnList, Values) :-
-    findall(Value, (
-        member(ColumnName, ColumnList),
-        nth0(ColumnIndex, Headers, ColumnName),
-        nth0(ColumnIndex, CurrentRow, Value)
+get_values_from_row(RowData, HeaderList, SelectedColumns, Values) :-
+    findall(Extracted, (
+        member(ColName, SelectedColumns),
+        nth0(ColIndex, HeaderList, ColName),
+        nth0(ColIndex, RowData, Extracted)
     ), Values).
 
-compare_function(Value1, '=', Value2) :-
-    (atom(Value1), atom(Value2) ->
-        Value1 = Value2
+evaluate_numbers(Val1, '=', Val2) :-
+    (atom(Val1), atom(Val2) -> 
+        Val1 = Val2
     ;
-    try_numSort(Value1, Value2, '=') ->
+    numComp(Val1, Val2, '=') -> 
         true
     ;
-    date_sort(Value1, Value2, '=')).
+    date_sort(Val1, Val2, '=')).
 
-compare_function(Value1, Op, Value2) :-
-    (Op = '>' ; Op = '<'),
-    (try_numSort(Value1, Value2, Op) ->
+evaluate_numbers(Val1, Operator, Val2) :-
+    member(Operator, ['>', '<']),
+    (numComp(Val1, Val2, Operator) -> 
         true
     ;
-    date_sort(Value1, Value2, Op)).
+    date_sort(Val1, Val2, Op)).
 
-try_numSort(Value1, Value2, Operator) :-
+numComp(Val1, Val2, Op) :-
     catch((
-        (atom(Value1) -> atom_number(Value1, Num1) ; number(Value1) -> Num1 = Value1),
-        (atom(Value2) -> atom_number(Value2, Num2) ; number(Value2) -> Num2 = Value2),
-        numEval(Num1, Num2, Operator)
+        (atom(Val1) -> atom_to_number(Val1, Num1) ; number(Val1) -> Num1 = Val1),
+        (atom(Val2) -> atom_to_number(Val2, Num2) ; number(Val2) -> Num2 = Val2),
+        numEval(Num1, Num2, Op)
     ), _, fail).
+
+atom_to_number(Atom, Number) :-
+    atom_number(Atom, Number).
 
 
 date_sort(Date1, Date2, Operator) :-
@@ -256,10 +265,3 @@ extract_values(TargetColumn, [[_, Headers, Rows]|_], ExtractedValues) :-
         nth0(ColumnIndex, CurrentRow, CurrentValue)
     ), TempValues),
     sort(TempValues, ExtractedValues).
-
-format_results([], []).
-format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
-    table(TableName, Headers),
-    format_results(RestTables, FormattedRest).
-format_results([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
-    format_results(RestTables, FormattedRest).

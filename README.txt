@@ -9,4 +9,4 @@ Things to Note:
     to discover that the question involved double-nested Ands, which our code did not account for. After
     some tinkering, we were able to get full points on that part of the assignment. 
 
-    Part 2: 
+    Part 2: For part 2, 
