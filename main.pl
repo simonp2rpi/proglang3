@@ -7,16 +7,9 @@ nlp_parse(LineSplit, Query) :-
     phrase(command(Query), LineSplit).
 
 % Get specific columns from a table
-evaluate_logical(Query,FilteredTable) :-
-    Query = [command, TableColumnInfo, Conditions],
-    % writeln(TableColumnInfo),
-    % writeln(Conditions),
-    TableColumnInfo = [[Columns, Table]],
-    % writeln(Columns),
-    % writeln(Table),
-    phrase(tableCommand(FilteredTable), Query),
-    writeln(FilteredTable).
-
+evaluate_logical([command, TableInfo, Operation], Results) :-
+    process_tables(TableInfo, Operation, IntermediateResults),
+    format_results(IntermediateResults, Results).
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
@@ -30,8 +23,8 @@ parse_and_evaluate(part2,[[Line,LineSplit]|T], [Result|ResultTail]):-
     write(Line),nl,
     nlp_parse(LineSplit,Query),
     evaluate_logical(Query,FilteredTable),
-    write("\t"),write(FilteredTable),nl,
-    % print_tables(FilteredTable),
+    %write("\t"),write(FilteredTable),nl,
+    print_tables(FilteredTable),
     parse_and_evaluate(part2,T,ResultTail).
 
 % Main 
@@ -118,58 +111,160 @@ values([Val1, Val2]) --> val(Val1), [','], val(Val2).
     
 val(Val) --> [Val], {atom(Val)}.
 
-% Part 2
-tableCommand([command, TableColumnInfo, Conditions]) --> 
-    tableName(TableColumnInfo), tableColumnHeader(TableColumnInfo)/*, filteredRows(Conditions)*/.
+% Write Part 2 Here
+format_results([], []).
+format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
+    table(TableName, Headers),
+    format_results(RestTables, FormattedRest).
+format_results([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
+    format_results(RestTables, FormattedRest).
 
-tableName([[_, Table]]) --> [Table], { table(Table, _) }.
-/*
-tableColumnHeader([[_, Table]]) --> 
-    { table(Table, Columns) }, ( 
-        [all] -> { true } ; ColumnsRequested = [[Column|Rest]],
-        { validate_columns(ColumnsRequested, Columns) }
-    ).
-*/
-% suggested alternative
-tableColumnHeader([[all, Table]]) -->
-    [all],
-    { table(Table, _) }.
-    
-tableColumnHeader([[Columns, Table]]) -->
-    columns(Columns),
-    { table(Table, AvailableColumns),
-      validate_columns(Columns, AvailableColumns) }.
+process_tables(TableInfo, [], Results) :-
+    get_table_data(TableInfo, Results).
+process_tables(TableInfo, [where, Conditions], Results) :-
+    get_table_data(TableInfo, Tables),
+    apply_conditions(Tables, Conditions, Results).
+process_tables(TableInfo, [matches, Values], Results) :-
+    get_table_data(TableInfo, Tables),
+    apply_value_match(Tables, Values, Results).
+process_tables(TableInfo, [join, TargetTable, JoinColumn], Results) :-
+    apply_join(TableInfo, TargetTable, JoinColumn, Results).
+process_tables(TableInfo, [matches, MatchCol, [command, [[MatchCol, TargetTable]], [where, WhereCondition]]], Results) :-
+    evaluate_logical([command, [[MatchCol, TargetTable]], [where, WhereCondition]], SubResults),
+    get_table_data(TableInfo, Tables),
+    apply_matches_subquery(Tables, SubResults, Results).
 
-% Function to ensure the column called is valid
-validate_columns([], _).
-validate_columns([Column|Rest], AvailableColumns) :-
-    member(Column, AvailableColumns),
-    validate_columns(Rest, AvailableColumns).
+get_table_data([], []).
+get_table_data([[all, TableName]|RestTables], [[TableName, Headers, Rows]|Results]) :-
+    table(TableName, Headers),
+    findall(CurrentRow, row(TableName, CurrentRow), UniqueRows),
+    sort(UniqueRows, Rows),
+    get_table_data(RestTables, Results).
+get_table_data([[Columns, TableName]|RestTables], [[TableName, ColumnList, FilteredRows]|Results]) :-
+    table(TableName, TableHeaders),
+    (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]),
+    findall(SelectedValues, (
+        row(TableName, FullRow),
+        extract_values_from_row(FullRow, TableHeaders, ColumnList, SelectedValues)
+    ), TempRows),
+    sort(TempRows, FilteredRows),
+    get_table_data(RestTables, Results).
 
-filteredRows([]) --> []. % No filtering: return all rows.
-filteredRows([join, Table1, Column]) --> { findall(_, fail, []) }. % Join is always empty
-filteredRows([matches, Values]) --> { findall(_, fail, []) }. % Match is always empty
-filteredRows([where, Condition]) --> filter_condition(Condition).
+apply_conditions([], _, []).
+apply_conditions([[TableName, Columns, _]|RestTables], Conditions, [[TableName, FinalColumns, UniqueRows]|Results]) :-
+    table(TableName, TableHeaders),
+    (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
+    findall(SelectedValues, (
+        row(TableName, FullRow),
+        evaluate_condition(TableHeaders, FullRow, Conditions),
+        (Columns = all ->
+            SelectedValues = FullRow
+        ;
+            extract_values_from_row(FullRow, TableHeaders, Columns, SelectedValues)
+        )
+    ), TempRows),
+    sort(TempRows, UniqueRows),
+    apply_conditions(RestTables, Conditions, Results).
 
-filter_condition([condition, Column, Operator, Value]) --> { 
-    % Fetch rows from the table and apply the condition.
-    table(Table, Columns),
-    nth1(Index, Columns, Column), % Find the index of the column in the table.
-    findall(Row, (row(Table, Row), evaluate_condition(Row, Index, Operator, Value)), FilteredRows)
-    },
-    [FilteredRows].
+evaluate_condition(Headers, Row, [condition, Column, Op, Value]) :-
+    !,
+    nth0(Index, Headers, Column),
+    nth0(Index, Row, RowValue),
+    compare_values(RowValue, Op, Value).
 
-filter_condition([and, Cond1, Cond2]) --> 
-    filter_condition(Cond1), 
-    filter_condition(Cond2).
+evaluate_condition(Headers, Row, [and, Cond1, Cond2]) :-
+    !,
+    evaluate_condition(Headers, Row, Cond1),
+    evaluate_condition(Headers, Row, Cond2).
 
-filter_condition([or, Cond1, Cond2]) --> { 
-    filter_condition(Cond1, Filtered1, []),
-    filter_condition(Cond2, Filtered2, []),
-    append(Filtered1, Filtered2, FilteredRows)
-    },
-    [FilteredRows].
+evaluate_condition(Headers, Row, [or, Cond1, Cond2]) :-
+    !,
+    (evaluate_condition(Headers, Row, Cond1)
+    ;
+    evaluate_condition(Headers, Row, Cond2)), !.
 
-evaluate_condition(Row, Index, =, Value) :- nth1(Index, Row, RowValue), RowValue = Value.
-evaluate_condition(Row, Index, <, Value) :- nth1(Index, Row, RowValue), RowValue @< Value.
-evalute_condition(Row, Index, >, Value) :- nth1(Index, Row, RowValue), RowValue @> Value.
+evaluate_condition(_, _, []) :- !.
+
+extract_values_from_row(CurrentRow, Headers, ColumnList, Values) :-
+    findall(Value, (
+        member(ColumnName, ColumnList),
+        nth0(ColumnIndex, Headers, ColumnName),
+        nth0(ColumnIndex, CurrentRow, Value)
+    ), Values).
+
+compare_values(Value1, '=', Value2) :-
+    (atom(Value1), atom(Value2) ->
+        Value1 = Value2
+    ;
+    try_numeric_compare(Value1, Value2, '=') ->
+        true
+    ;
+    try_date_compare(Value1, Value2, '=')).
+
+compare_values(Value1, Op, Value2) :-
+    (Op = '>' ; Op = '<'),
+    (try_numeric_compare(Value1, Value2, Op) ->
+        true
+    ;
+    try_date_compare(Value1, Value2, Op)).
+
+try_numeric_compare(Value1, Value2, Operator) :-
+    catch((
+        (atom(Value1) -> atom_number(Value1, Num1) ; number(Value1) -> Num1 = Value1),
+        (atom(Value2) -> atom_number(Value2, Num2) ; number(Value2) -> Num2 = Value2),
+        numeric_compare(Num1, Num2, Operator)
+    ), _, fail).
+
+numeric_compare(Num1, Num2, '<') :- Num1 < Num2.
+numeric_compare(Num1, Num2, '>') :- Num1 > Num2.
+numeric_compare(Num1, Num2, '=') :- Num1 =:= Num2.
+
+try_date_compare(Value1, Value2, Operator) :-
+    catch((
+        atom_string(Value1, String1),
+        atom_string(Value2, String2),
+        split_string(String1, "-", "", [Month1Str, Day1Str, Year1Str]),
+        split_string(String2, "-", "", [Month2Str, Day2Str, Year2Str]),
+        maplist(atom_number, [Month1Str, Day1Str, Year1Str], [Month1, Day1, Year1]),
+        maplist(atom_number, [Month2Str, Day2Str, Year2Str], [Month2, Day2, Year2]),
+        compare_dates(Year1, Month1, Day1, Year2, Month2, Day2, Operator)
+    ), _, fail).
+
+compare_dates(Y1, M1, D1, Y2, M2, D2, '>') :-
+    date_value(Y1, M1, D1, V1),
+    date_value(Y2, M2, D2, V2),
+    V1 > V2.
+compare_dates(Y1, M1, D1, Y2, M2, D2, '<') :-
+    date_value(Y1, M1, D1, V1),
+    date_value(Y2, M2, D2, V2),
+    V1 < V2.
+compare_dates(Y1, M1, D1, Y2, M2, D2, '=') :-
+    date_value(Y1, M1, D1, V1),
+    date_value(Y2, M2, D2, V2),
+    V1 =:= V2.
+
+date_value(Year, Month, Day, Value) :-
+    Value is Year * 10000 + Month * 100 + Day.
+
+apply_value_match([], _, []).
+apply_value_match([[TableName, Columns, _]|RestTables], Values, [[TableName, FinalColumns, []]|Results]) :-
+    table(TableName, TableHeaders),
+    (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
+    apply_value_match(RestTables, Values, Results).
+
+apply_matches_subquery([], _, []).
+apply_matches_subquery([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
+    table(TableName, TableHeaders),
+    (Columns = all -> FinalColumns = TableHeaders ; FinalColumns = Columns),
+    apply_matches_subquery(RestTables, [], Results).
+
+apply_join([[Columns, SourceTable]], _, _, [[SourceTable, ColumnList, []]]) :-
+    (is_list(Columns) -> ColumnList = Columns ; ColumnList = [Columns]).
+
+extract_values(TargetColumn, [[_, Headers, Rows]|_], ExtractedValues) :-
+    nth0(ColumnIndex, Headers, TargetColumn),
+    findall(CurrentValue, (
+        member(CurrentRow, Rows),
+        nth0(ColumnIndex, CurrentRow, CurrentValue)
+    ), TempValues),
+    sort(TempValues, ExtractedValues).
