@@ -111,6 +111,8 @@ values([Val1, Val2]) --> val(Val1), [','], val(Val2).
     
 val(Val) --> [Val], {atom(Val)}.
 
+
+
 % Write Part 2 Here
 format_results([], []).
 format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
