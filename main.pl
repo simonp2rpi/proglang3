@@ -14,7 +14,8 @@ evaluate_logical(Query,FilteredTable) :-
     TableColumnInfo = [[Columns, Table]],
     % writeln(Columns),
     % writeln(Table),
-    phrase(tableCommand(FilteredTable), Query).
+    phrase(tableCommand(FilteredTable), Query),
+    writeln(FilteredTable).
 
 
 % Parse individual commands and evaluate
@@ -119,24 +120,25 @@ val(Val) --> [Val], {atom(Val)}.
 
 % Part 2
 tableCommand([command, TableColumnInfo, Conditions]) --> 
-    tableName(TableColumnInfo), tableColumnHeader(TableColumnInfo), filteredRows(Conditions).
+    tableName(TableColumnInfo), tableColumnHeader(TableColumnInfo)/*, filteredRows(Conditions)*/.
 
-tableName([[_, Table]]) --> { table(Table, _) }.
+tableName([[_, Table]]) --> [Table], { table(Table, _) }.
+/*
 tableColumnHeader([[_, Table]]) --> 
     { table(Table, Columns) }, ( 
         [all] -> { true } ; ColumnsRequested = [[Column|Rest]],
         { validate_columns(ColumnsRequested, Columns) }
     ).
-
+*/
 % suggested alternative
-% tableColumnHeader([[all, Table]]) -->
-%     [all],
-%     { table(Table, _) }.
+tableColumnHeader([[all, Table]]) -->
+    [all],
+    { table(Table, _) }.
     
-% tableColumnHeader([[Columns, Table]]) -->
-%     columns(Columns),
-%     { table(Table, AvailableColumns),
-%       validate_columns(Columns, AvailableColumns) }.
+tableColumnHeader([[Columns, Table]]) -->
+    columns(Columns),
+    { table(Table, AvailableColumns),
+      validate_columns(Columns, AvailableColumns) }.
 
 % Function to ensure the column called is valid
 validate_columns([], _).
