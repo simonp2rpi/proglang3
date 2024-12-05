@@ -8,8 +8,8 @@ nlp_parse(LineSplit, Query) :-
 
 % Get specific columns from a table
 evaluate_logical([command, TableColumnInfo, Conditions], FilteredTable) :-
-    table_command(TableColumnInfo, Conditions, Results),
-    format_results(Results, FilteredTable).
+    get_tables(TableColumnInfo, Conditions, Results),
+    clean_tables(Results, FilteredTable).
 
 % Parse individual commands and evaluate
 parse_and_evaluate(_,[], []).
@@ -114,16 +114,16 @@ val(Val) --> [Val], {atom(Val)}.
 
 
 % Write Part 2 Here
-table_command(TableColumnInfo, [], Results) :- get_table(TableColumnInfo, Results).
-table_command(TableColumnInfo, [where, Conditions], Results) :-
+get_tables(TableColumnInfo, [], Results) :- get_table(TableColumnInfo, Results).
+get_tables(TableColumnInfo, [where, Conditions], Results) :-
     get_table(TableColumnInfo, Tables),
     apply_conditions(Tables, Conditions, Results).
-table_command(TableColumnInfo, [matches, Values], Results) :-
+get_tables(TableColumnInfo, [matches, Values], Results) :-
     get_table(TableColumnInfo, Tables),
     apply_match(Tables, Values, Results).
-table_command(TableColumnInfo, [join, Table, Column], Results) :-
+get_tables(TableColumnInfo, [join, Table, Column], Results) :-
     apply_join(TableColumnInfo, Table, Column, Results).
-table_command(TableColumnInfo, [matches, MatchCol, [command, [[MatchCol, Table]], [where, Condition]]], Results) :-
+get_tables(TableColumnInfo, [matches, MatchCol, [command, [[MatchCol, Table]], [where, Condition]]], Results) :-
     evaluate_logical([command, [[MatchCol, Table]], [where, Condition]], SubResults),
     get_table(TableColumnInfo, Tables),
     apply_matches_subquery(Tables, SubResults, Results).
@@ -196,19 +196,19 @@ compare_function(Value1, '=', Value2) :-
     (atom(Value1), atom(Value2) ->
         Value1 = Value2
     ;
-    try_compare_numbers(Value1, Value2, '=') ->
+    num_sort(Value1, Value2, '=') ->
         true
     ;
-    try_compare_dates(Value1, Value2, '=')).
+    date_sort(Value1, Value2, '=')).
 
 compare_function(Value1, Op, Value2) :-
     (Op = '>' ; Op = '<'),
-    (try_compare_numbers(Value1, Value2, Op) ->
+    (num_sort(Value1, Value2, Op) ->
         true
     ;
-    try_compare_dates(Value1, Value2, Op)).
+    date_sort(Value1, Value2, Op)).
 
-try_compare_numbers(Value1, Value2, Operator) :-
+num_sort(Value1, Value2, Operator) :-
     catch((
         (atom(Value1) -> atom_number(Value1, Num1) ; number(Value1) -> Num1 = Value1),
         (atom(Value2) -> atom_number(Value2, Num2) ; number(Value2) -> Num2 = Value2),
@@ -219,32 +219,29 @@ compare_numbers(Num1, Num2, '<') :- Num1 < Num2.
 compare_numbers(Num1, Num2, '>') :- Num1 > Num2.
 compare_numbers(Num1, Num2, '=') :- Num1 =:= Num2.
 
-try_compare_dates(Value1, Value2, Operator) :-
-    catch((
-        atom_string(Value1, String1),
-        atom_string(Value2, String2),
-        split_string(String1, "-", "", [Month1Str, Day1Str, Year1Str]),
-        split_string(String2, "-", "", [Month2Str, Day2Str, Year2Str]),
-        maplist(atom_number, [Month1Str, Day1Str, Year1Str], [Month1, Day1, Year1]),
-        maplist(atom_number, [Month2Str, Day2Str, Year2Str], [Month2, Day2, Year2]),
-        compare_dates(Year1, Month1, Day1, Year2, Month2, Day2, Operator)
-    ), _, fail).
+date_sort(Date1, Date2, Operator) :-
+    safely_extract_date_components(Date1, ParsedDate1),
+    safely_extract_date_components(Date2, ParsedDate2),
+    evaluate_date_comparison(ParsedDate1, ParsedDate2, Operator).
 
-compare_dates(Y1, M1, D1, Y2, M2, D2, '>') :-
-    date_value(Y1, M1, D1, V1),
-    date_value(Y2, M2, D2, V2),
-    V1 > V2.
-compare_dates(Y1, M1, D1, Y2, M2, D2, '<') :-
-    date_value(Y1, M1, D1, V1),
-    date_value(Y2, M2, D2, V2),
-    V1 < V2.
-compare_dates(Y1, M1, D1, Y2, M2, D2, '=') :-
-    date_value(Y1, M1, D1, V1),
-    date_value(Y2, M2, D2, V2),
-    V1 =:= V2.
 
-date_value(Year, Month, Day, Value) :-
+safely_extract_date_components(DateString, [Year, Month, Day]) :-
+    atom_string(DateString, ConvertedDate),  % Ensure input is a string.
+    split_string(ConvertedDate, "-", "", [MonthStr, DayStr, YearStr]),  % Split date into parts.
+    maplist(atom_number, [YearStr, MonthStr, DayStr], [Year, Month, Day]).  % Convert parts to numbers.
+
+
+evaluate_date_comparison([Year1, Month1, Day1], [Year2, Month2, Day2], Operator) :-
+    compute_date_value(Year1, Month1, Day1, Value1),
+    compute_date_value(Year2, Month2, Day2, Value2),
+    compare_values(Value1, Value2, Operator).
+
+compute_date_value(Year, Month, Day, Value) :-
     Value is Year * 10000 + Month * 100 + Day.
+
+compare_values(Value1, Value2, '>') :- Value1 > Value2.
+compare_values(Value1, Value2, '<') :- Value1 < Value2.
+compare_values(Value1, Value2, '=') :- Value1 =:= Value2.
 
 apply_matches_subquery([], _, []).
 apply_matches_subquery([[TableName, Columns, _]|RestTables], _, [[TableName, FinalColumns, []]|Results]) :-
@@ -263,9 +260,9 @@ extract_values(TargetColumn, [[_, Headers, Rows]|_], ExtractedValues) :-
     ), TempValues),
     sort(TempValues, ExtractedValues).
 
-format_results([], []).
-format_results([[TableName, all, Rows]|RestTables], [[TableName, Headers, Rows]|FormattedRest]) :-
-    table(TableName, Headers),
-    format_results(RestTables, FormattedRest).
-format_results([[TableName, Columns, Rows]|RestTables], [[TableName, Columns, Rows]|FormattedRest]) :-
-    format_results(RestTables, FormattedRest).
+clean_tables([], []).
+clean_tables([[Name, all_columns, Data]|Rest], [[Name, Headers, Data]|FormattedRest]) :-
+    table(Name, Headers),
+    clean_tables(Rest, FormattedRest).
+clean_tables([[Name, SelectedColumns, Data]|Rest], [[Name, SelectedColumns, Data]|FormattedRest]) :-
+    clean_tables(Rest, FormattedRest).
